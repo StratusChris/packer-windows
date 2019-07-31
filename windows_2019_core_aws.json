@@ -1,0 +1,63 @@
+{
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "region": "us-east-1",
+      "subnet_id": "{{user `subnet_id`}}",
+      "source_ami": "ami-09ed21a8269ebc1f7",
+      "instance_type": "t3.medium",
+      "ami_name": "packer-test-{{timestamp}}",
+      "user_data_file": "./scripts/enable-winrm-https-user-data.ps1",
+      "associate_public_ip_address": false,
+      "ssh_interface": "private_ip",
+      "communicator": "winrm",
+      "winrm_username": "Administrator",
+      "winrm_insecure": true,
+      "winrm_use_ssl": true,
+      "tags": {
+        "OS_Version": "Windows2019",
+        "Release": "Latest",
+        "Base_AMI_Name": "{{ .SourceAMIName }}",
+        "Extra": "{{ .SourceAMITags.TagName }}"
+      }
+    }
+  ],
+  "post-processors": [
+  ],
+  "provisioners": [
+    {
+      "scripts": [
+        "./scripts/enable-rdp.bat"
+      ],
+      "type": "windows-shell"
+    },
+    {
+      "scripts": [
+        "./scripts/debloat-windows.ps1"
+      ],
+      "type": "powershell"
+    },
+    {
+      "scripts": [
+        "./scripts/set-winrm-automatic.bat",
+        "./scripts/uac-enable.bat",
+        "./scripts/compile-dotnet-assemblies.bat",
+        "./scripts/dis-updates.bat",
+        "./scripts/compact.bat"
+      ],
+      "type": "windows-shell"
+    },
+    {
+      "type": "powershell",
+      "inline": [
+        "C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1 -Schedule",
+        "C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 -NoShutdown"
+      ]
+    }
+  ],
+  "variables": {
+    "headless": "false",
+    "subnet_id": "subnet-03f508392fe6c73a7"
+  }
+}
+
